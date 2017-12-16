@@ -13,10 +13,10 @@ module.exports = function(context) {
     var deferral = new Q.defer();
     var projectRoot = cordova_util.cdProjectRoot();
 
-    var key = crypto.randomBytes(24).toString('base64');
-    var iv = crypto.randomBytes(12).toString('base64');
-
-    console.log('key=' + key + ', iv=' + iv)
+//    var key = crypto.randomBytes(24).toString('base64');
+//    var iv = crypto.randomBytes(12).toString('base64');
+//
+//    console.log('key=' + key + ', iv=' + iv)
 
     var targetFiles = loadCryptFileTargets();
 
@@ -29,6 +29,33 @@ module.exports = function(context) {
         var platformApi = platforms.getPlatformApi(platform, platformPath);
         var platformInfo = platformApi.getPlatformInfo();
         var wwwDir = platformInfo.locations.www;
+
+				// iv, keyの生成
+				var cfg = new ConfigParser(platformInfo.projectConfig.path);
+				var packageName = cfg.packageName(); // attr(id)
+				switch (platform) {
+					case 'ios':
+						packageName = cfg.ios_CFBundleIdentifier() || packageName;
+						break;
+					case 'android':
+						packageName = cfg.android_packageName() || packageName;
+						break;
+				}
+				// 12文字にする
+				var iv = packageName;
+				if (packageName.length < 12) {
+					for(i=0; i < 12 - packageName.length;i++) {
+						iv += '_';
+					}
+				}
+				else {
+					iv = iv.slice(0, 12);
+				}
+				var key = iv + iv;
+
+				iv = new Buffer(iv).toString('base64');
+				key = new Buffer(key).toString('base64');
+				console.log('key=' + key + ', iv=' + iv)
 
         findCryptFiles(wwwDir).filter(function(file) {
             return isCryptFile(file.replace(wwwDir, ''));
